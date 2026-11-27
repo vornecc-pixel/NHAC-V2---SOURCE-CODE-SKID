@@ -1,102 +1,130 @@
 # Loadstrings
 
-Repo: `vornecc-pixel/NHAC-V2---SOURCE-CODE-SKID`
-Branch with these files: `arena/54e891b6-nhac-v2-source-code-skid`
+Repo: `vornecc-pixel/NHAC-V2---SOURCE-CODE-SKID` (private)
+Branch with these files: `arena/54e891b6-nhac-v2-source-code-skid` (head `81c52d3`)
 
-> **The repo is currently PRIVATE.** A Roblox executor fetches raw files
-> anonymously, so `raw.githubusercontent.com` returns **404** for a private
-> repo — the loadstrings below only work after the repo is public
-> (GitHub → Settings → General → Danger zone → Change visibility → Public),
-> or after the files are mirrored somewhere public (gist, jsDelivr, your own
-> host). See "If the repo stays private" at the bottom.
+## Status: not publicly reachable yet
+
+The loadstrings below need a **public** URL. Executors download anonymously, so a
+private repo answers `404: Not Found` — that is the error in the console
+(`[VORNECC] download failed -> 404: Not Found`).
+
+Publishing from this session was attempted and blocked by the Arena GitHub
+connection, which only has write access to `NHAC-V2---SOURCE-CODE-SKID`:
+
+| Attempt | Result |
+|---|---|
+| `gh gist create --public ui_test.lua ...` | `403 Resource not accessible by integration` |
+| `gh repo create vornecc-ui --public` | `403 createRepository` |
+| `gh api PUT .../NHAC-V2---SOURCE-CODE-SKIDDED/contents/ui_test.lua` | `403` |
+| `git push --dry-run` → public mirror repo | `403 Permission denied` |
+
+Fix on the Arena side: reconnect GitHub with broader permissions (gist + repo
+creation + write to other repos), or do one of the 2-minute routes below.
+
+---
+
+## Publish it yourself (pick one)
+
+### A. Make this repo public — zero other work
+
+GitHub → repo → **Settings → General → Danger zone → Change visibility → Public**.
+The URLs in section 1/2/3 then work exactly as written, nothing else to change.
+
+### B. Create the gist (web, ~1 min)
+
+1. Open <https://gist.github.com>
+2. Drag `ui_test.lua` (+ optionally `ui_test_harness.lua`, `gamesense.txt`) into the page
+3. **Create public gist**, then copy the URL, e.g.
+   `https://gist.github.com/vornecc-pixel/abc123def456`
+
+Raw URL for a file in that gist:
+
+```
+https://gist.githubusercontent.com/vornecc-pixel/abc123def456/raw/ui_test.lua
+```
+
+### C. Create the gist (CLI, one command)
+
+From a clone of this repo:
+
+```bash
+gh gist create --public ui_test.lua ui_test_harness.lua gamesense.txt
+```
+
+It prints the gist URL; take the raw URL as in B.
+
+> **Tip:** if pasting the 363 KB `ui_test.lua` is annoying, publish only
+> `ui_test_harness.lua` (29 KB). Run your existing menu script first, then run
+> the harness loadstring — it appends the test UI to the loaded `Library`.
 
 ---
 
 ## 1. Full UI + self-test  (`ui_test.lua`)
 
-Self-contained: library + VORNECC redesign + 9 tabs of controls + 31 automated checks.
+```lua
+loadstring(game:HttpGet("https://gist.githubusercontent.com/vornecc-pixel/<GIST_ID>/raw/ui_test.lua"))()
+```
+
+Same thing, using this repo's raw URL (only after route A):
 
 ```lua
 loadstring(game:HttpGet("https://raw.githubusercontent.com/vornecc-pixel/NHAC-V2---SOURCE-CODE-SKID/arena/54e891b6-nhac-v2-source-code-skid/ui_test.lua"))()
 ```
 
-## 2. Just the redesigned UI, no tests  (`gamesense.txt`)
+## 2. Redesigned UI only, no tests  (`gamesense.txt`)
 
 ```lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/vornecc-pixel/NHAC-V2---SOURCE-CODE-SKID/arena/54e891b6-nhac-v2-source-code-skid/gamesense.txt"))()
+loadstring(game:HttpGet("https://gist.githubusercontent.com/vornecc-pixel/<GIST_ID>/raw/gamesense.txt"))()
 ```
 
-## 3. Test harness only  (`ui_test_harness.lua`)
+## 3. Harness only  (`ui_test_harness.lua`)
 
-For appending under a library you already loaded — **not** standalone.
-It needs `Library` to already exist in the executor environment.
+Not standalone — `Library` must already be loaded in the executor.
 
 ```lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/vornecc-pixel/NHAC-V2---SOURCE-CODE-SKID/arena/54e891b6-nhac-v2-source-code-skid/ui_test_harness.lua"))()
+loadstring(game:HttpGet("https://gist.githubusercontent.com/vornecc-pixel/<GIST_ID>/raw/ui_test_harness.lua"))()
 ```
 
 ---
 
-## Safer loader (survives HttpGet / loadstring quirks)
+## Safer loader (use this one)
 
-Most executors provide `loadstring`; a few only expose `load`. This version uses
-whichever exists and tells you what failed instead of dying silently:
+Uses `loadstring` or `load`, and reports the real failure instead of dying silently:
 
 ```lua
-local URL = "https://raw.githubusercontent.com/vornecc-pixel/NHAC-V2---SOURCE-CODE-SKID/arena/54e891b6-nhac-v2-source-code-skid/ui_test.lua"
+local URL = "https://gist.githubusercontent.com/vornecc-pixel/<GIST_ID>/raw/ui_test.lua"
 
-local Ok, Source = pcall(function()
-    return game:HttpGet(URL, true)
-end)
+local Ok, Source = pcall(function() return game:HttpGet(URL, true) end)
 
 if not Ok or type(Source) ~= "string" or #Source < 1000 then
-    warn("[VORNECC] download failed (private repo? blocked host?) -> " .. tostring(Source))
-    return
+    return warn("[VORNECC] download failed -> " .. tostring(Source) .. " (private repo / wrong gist id?)")
 end
 
 local Chunk, Err = (loadstring or load)(Source, "VORNECC_UI")
 
 if not Chunk then
-    warn("[VORNECC] compile failed -> " .. tostring(Err))
-    return
+    return warn("[VORNECC] compile failed -> " .. tostring(Err))
 end
 
 Chunk()
 ```
 
-## Pinned to an exact commit (immutable URL)
+## No hosting at all
 
-`ui_test.lua` at commit `106cc784070183a4896a4824f3ba103779265d31`:
-
-```lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/vornecc-pixel/NHAC-V2---SOURCE-CODE-SKID/106cc784070183a4896a4824f3ba103779265d31/ui_test.lua"))()
-```
-
-Once this branch is merged into `main`, `main` becomes the stable path —
-swap `arena/54e891b6-nhac-v2-source-code-skid` for `main` in any URL above.
-
----
-
-## If the repo stays private
-
-Pick one:
-
-1. **Make it public** (simplest — the branch URL above then just works).
-2. **Public gist** — create one with the file contents and use its raw URL:
-   `loadstring(game:HttpGet("https://gist.githubusercontent.com/<user>/<gist-id>/raw/ui_test.lua"))()`
-3. **jsDelivr mirror** (public repos only, CDN in front of GitHub):
-   `https://cdn.jsdelivr.net/gh/vornecc-pixel/NHAC-V2---SOURCE-CODE-SKID@arena/54e891b6-nhac-v2-source-code-skid/ui_test.lua`
-4. **No HTTP at all** — drop `ui_test.lua` into the executor's workspace folder
-   and run it locally:
+1. Drop `ui_test.lua` into the executor's workspace folder, then:
 
    ```lua
    loadstring(readfile("ui_test.lua"))()
    ```
 
-   (`readfile` is available in most executors; some need the file inside the
-   executor's `workspace` folder specifically.)
-5. **Copy-paste** `ui_test.lua` straight into the executor's editor and hit run —
-   no network dependency at all.
+2. Or open `ui_test.lua` in the executor editor and press execute — no network
+   dependency, works even if GitHub is blocked.
 
-Never put a GitHub personal access token inside a loadstring: anything you run
-in an executor can read it.
+## Housekeeping
+
+- Never put a GitHub personal access token in a loadstring; anything running in
+  an executor can read it.
+- Gist URLs can be deleted at any time — for a stable version, use a commit-pinned
+  URL (`.../raw/<commit-sha>/ui_test.lua`) or make the repo public and pin to a
+  commit there (`https://raw.githubusercontent.com/vornecc-pixel/NHAC-V2---SOURCE-CODE-SKID/81c52d3.../ui_test.lua`).
